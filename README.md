@@ -34,6 +34,19 @@ AI：   DeepSeek Function Calling / 自研 Agent 引擎
 
 ## 快速启动
 
+### Docker Compose（推荐）
+
+```bash
+git clone https://github.com/p1kap1/AICraft.git
+cd AICraft
+export OPENAI_API_KEY=你的Key
+docker compose up -d
+```
+
+三条命令，自动启动 PostgreSQL + 后端 + 前端。打开 http://localhost:3000
+
+### 本地开发
+
 ```bash
 # 1. 数据库
 docker run -d --name aicraft-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 pgvector/pgvector:pg15
