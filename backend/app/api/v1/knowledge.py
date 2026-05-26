@@ -60,6 +60,36 @@ async def upload_document(kb_id: str, file: UploadFile = File(...), user: User =
     return ApiResponse(data={"chunks": count, "filename": filename})
 
 
+@router.post("/{kb_id}/search")
+def search_kb(kb_id: str, query: str = "", top_k: int = 5, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id, KnowledgeBase.user_id == user.id).first()
+    if not kb: raise HTTPException(404, "知识库不存在")
+
+    # 1. 关键词检索（ILIKE 模糊匹配）
+    keyword_results = db.query(KnowledgeChunk).filter(
+        KnowledgeChunk.kb_id == kb_id,
+        KnowledgeChunk.content.ilike(f"%{query}%")
+    ).limit(top_k).all()
+
+    # 2. 向量检索（cosine 相似度）
+    try:
+        q_emb = get_embedding(query)
+        vector_results = db.query(KnowledgeChunk).filter(
+            KnowledgeChunk.kb_id == kb_id,
+            KnowledgeChunk.embedding.isnot(None)
+        ).order_by(KnowledgeChunk.embedding.cosine_distance(q_emb)).limit(top_k).all()
+    except:
+        vector_results = []
+
+    # 3. 合并去重（关键词优先，向量补充）
+    seen = {c.id: c for c in keyword_results}
+    for c in vector_results:
+        if c.id not in seen and len(seen) < top_k * 2:
+            seen[c.id] = c
+
+    return {"query": query, "results": [{"content": c.content, "source": c.source} for c in list(seen.values())[:top_k]]}
+
+
 @router.delete("/{kb_id}")
 def delete_kb(kb_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id, KnowledgeBase.user_id == user.id).first()
