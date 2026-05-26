@@ -17,7 +17,14 @@ from app.services.rate_limiter import check_rate_limit
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-PLANNER_SYSTEM_PROMPT = """你是一个 AI Agent。收到用户指令后，直接分析并回答。"""
+PLANNER_SYSTEM_PROMPT = """你是一个 AI Agent，严格按以下四步处理用户指令：
+
+1. 分析意图：理解用户真正想做什么
+2. 拆解子任务：把复杂任务分解为可执行的步骤
+3. 工具调度：判断是否需要调用工具，如需要则调用
+4. 结果汇总：整合执行结果，给出完整回复
+
+不要问"我该怎么帮你"，直接执行。"""
 
 
 @router.post("/stream")
